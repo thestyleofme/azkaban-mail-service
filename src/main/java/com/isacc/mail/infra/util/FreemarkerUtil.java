@@ -1,8 +1,10 @@
 package com.isacc.mail.infra.util;
 
 import java.io.File;
+import java.io.StringWriter;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 
 import com.isacc.mail.MailServiceApplication;
 import com.isacc.mail.api.dto.ApiResult;
@@ -27,13 +29,16 @@ public class FreemarkerUtil {
     }
 
     private static Configuration getConfiguration(String basePackagePath) {
-        Configuration cfg = new Configuration(Configuration.VERSION_2_3_26);
+        Configuration cfg = new Configuration(Configuration.VERSION_2_3_28);
+        cfg.setLocale(Locale.CHINA);
+        cfg.setTimeZone(TimeZone.getTimeZone("Asia/Shanghai"));
+        cfg.setOutputEncoding("UTF-8");
         cfg.setNumberFormat("#");
         cfg.setClassForTemplateLoading(MailServiceApplication.class, basePackagePath);
         return cfg;
     }
 
-    public static ApiResult<Object> createEmailFile(Map<String, Object> root, String ftlPackagePath, String templateName, String fileName) {
+    public static ApiResult<Object> createFileTemplate(Map<String, Object> root, String ftlPackagePath, String templateName, String fileName) {
         final ApiResult<Object> successApiResult = ApiResult.initSuccess();
         final ApiResult<Object> failureApiResult = ApiResult.initFailure();
         try {
@@ -47,8 +52,27 @@ public class FreemarkerUtil {
             successApiResult.setContent(file);
             return successApiResult;
         } catch (Exception e) {
-            log.error("create email file failure!", e);
-            failureApiResult.setMessage("create email file failure!");
+            log.error("create file template failure!", e);
+            failureApiResult.setMessage("create file template failure!");
+            failureApiResult.setContent(e.getMessage());
+            return failureApiResult;
+        }
+    }
+
+    public static ApiResult<Object> createStringTemplate(Map<String, Object> root, String ftlPackagePath, String templateName) {
+        final ApiResult<Object> successApiResult = ApiResult.initSuccess();
+        final ApiResult<Object> failureApiResult = ApiResult.initFailure();
+        try {
+            Configuration cfg = FreemarkerUtil.getConfiguration(ftlPackagePath);
+            Template template = cfg.getTemplate(templateName, Locale.CHINA);
+            StringWriter writer = new StringWriter();
+            template.process(root, writer);
+            writer.close();
+            successApiResult.setContent(writer.toString());
+            return successApiResult;
+        } catch (Exception e) {
+            log.error("create string template failure!", e);
+            failureApiResult.setMessage("create string template failure!");
             failureApiResult.setContent(e.getMessage());
             return failureApiResult;
         }

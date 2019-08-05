@@ -1,11 +1,8 @@
 package com.isacc.mail.service.impl;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
@@ -13,10 +10,9 @@ import com.isacc.mail.api.dto.ApiResult;
 import com.isacc.mail.infra.config.AzkabanProperties;
 import com.isacc.mail.infra.constant.ExecFlowStatusConstants;
 import com.isacc.mail.infra.util.FreemarkerUtil;
-import com.isacc.mail.service.AzkabanService;
 import com.isacc.mail.service.AzkabanMailService;
+import com.isacc.mail.service.AzkabanService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -140,35 +136,30 @@ public class AzkabanMailServiceImpl implements AzkabanMailService {
             // 邮件接受者
             mimeMessageHelper.setTo(toMailArray);
             // 发送内容 第二个参数true表示使用HTML语言来编写邮件
-            File file;
+            String htmlContent;
             if (isSuccess) {
                 // 主题
                 mimeMessageHelper.setSubject(String.format("%s数据库%s任务成功通知", azkabanProperties.getProfile(), execFlowContent.get("project")));
-                final ApiResult successEmail = FreemarkerUtil.createEmailFile(
+                final ApiResult successEmail = FreemarkerUtil.createStringTemplate(
                         execFlowContent,
                         azkabanProperties.getMailTemplatePath(),
-                        azkabanProperties.getMailSuccessFtl(),
-                        "success.txt");
-                file = (File) successEmail.getContent();
-                mimeMessageHelper.setText(FileUtils.readFileToString(file, "UTF-8"), true);
+                        azkabanProperties.getMailSuccessFtl());
+                htmlContent = (String) successEmail.getContent();
+                mimeMessageHelper.setText(htmlContent, true);
             } else {
                 // 主题
                 mimeMessageHelper.setSubject(String.format("警告！%s数据库%s任务失败通知", azkabanProperties.getProfile(), execFlowContent.get("project")));
-                final ApiResult successEmail = FreemarkerUtil.createEmailFile(
+                final ApiResult failEmail = FreemarkerUtil.createStringTemplate(
                         execFlowContent,
                         azkabanProperties.getMailTemplatePath(),
-                        azkabanProperties.getMailFailFtl(),
-                        "fail.txt");
-                file = (File) successEmail.getContent();
-                mimeMessageHelper.setText(FileUtils.readFileToString(file, "UTF-8"), true);
+                        azkabanProperties.getMailFailFtl());
+                htmlContent = (String) failEmail.getContent();
+                mimeMessageHelper.setText(htmlContent, true);
             }
             // 发送
             javaMailSender.send(mimeMessage);
-            FileUtils.forceDelete(file);
         } catch (MessagingException e) {
             log.error("send email error", e);
-        } catch (IOException e) {
-            log.error("read email to string error", e);
         }
     }
 }
